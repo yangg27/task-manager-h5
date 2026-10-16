@@ -6,8 +6,9 @@ const utils = {
     });
   },
 
-  async hashPassword(password, salt = '') {
+  async hashPassword(password, salt) {
     if (!password) return '';
+    if (typeof salt !== 'string' || !salt) throw new Error('缺少密码 salt');
     const encoder = new TextEncoder();
     let data = encoder.encode(salt + password);
     try {

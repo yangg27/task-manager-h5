@@ -62,6 +62,7 @@ async function run() {
     const timestamp = Date.now();
     const email = `test${timestamp}@example.com`;
     const phone = `138${String(timestamp).slice(-8)}`;
+    if (phone.length !== 11) throw new Error('测试手机号格式生成失败');
     const password = 'Test1234';
 
     await page.click('[data-tab="register"]');

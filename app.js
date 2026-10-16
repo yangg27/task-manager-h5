@@ -387,7 +387,7 @@ const app = {
       </div>
       <div class="form-group"><label>标签（用逗号分隔）</label><input class="input" id="task-tags" value="${utils.escapeHtml(task?.tags || '')}" placeholder="如：重要，客户，会议"></div>
       <div class="form-group" id="quick-tags" style="margin-top:-6px"><label>快速标签</label><div class="quick-tags" id="quick-tags-list"></div></div>
-      ${!task ? `<div class="form-group"><label>模板</label><select class="input" id="task-template"><option value="">不使用模板</option>${(this.state.templates || []).map(tpl => `<option value="${tpl.id}">${utils.escapeHtml(tpl.name)}</option>`).join('')}</select></div>` : ''}
+      ${!task ? `<div class="form-group"><label>模板</label><select class="input" id="task-template"><option value="">不使用模板</option>${(this.state.templates || []).map(tpl => `<option value="${utils.escapeHtml(tpl.id)}">${utils.escapeHtml(tpl.name)}</option>`).join('')}</select></div>` : ''}
       ${!task ? `<div class="form-group"><label>重复周期</label><select class="input" id="task-repeat"><option value="">不重复</option><option value="daily">每天</option><option value="weekly">每周</option><option value="monthly">每月</option><option value="yearly">每年</option></select></div>` : ''}
       ${task?.repeat ? `<div class="form-group"><label>重复周期</label><div class="chip">${this.repeatText(task.repeat)}</div></div>` : ''}
       ${defaults.parsed ? `<div class="form-group"><label>年度计划解析来源</label><div class="chip">${utils.escapeHtml(defaults.parsed)}</div></div>` : ''}
@@ -724,11 +724,11 @@ const app = {
           alert(settings.notifications !== false ? '已开启提醒' : '已关闭提醒');
         });
         this.el('notify-days').addEventListener('change', async () => {
-          const settings = await dbApi.getByKey('settings', auth.currentUser.id) || { userId: auth.currentUser.id };
-          settings.remindDays = parseInt(this.el('notify-days').value) || 1;
-          await dbApi.put('settings', settings);
-          this.state.settings = settings;
-        });
+        const settings = await dbApi.getByKey('settings', auth.currentUser.id) || { userId: auth.currentUser.id };
+        settings.remindDays = parseInt(this.el('notify-days').value) || 1;
+        await dbApi.put('settings', settings);
+        this.state.settings = settings;
+      });
       }
     });
     this.el('avatar-input').addEventListener('change', async e => {
@@ -737,6 +737,7 @@ const app = {
       const MAX_AVATAR = 2 * 1024 * 1024; // 2MB
       if (file.size > MAX_AVATAR) { alert('头像图片不能超过 2MB'); return; }
       const dataUrl = await utils.readFileAsBase64(file);
+      if (!dataUrl.startsWith('data:image/')) { alert('头像必须是图片文件'); return; }
       await auth.updateProfile({ avatar: dataUrl });
       this.render();
     });

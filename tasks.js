@@ -25,7 +25,7 @@ const tasks = {
       }
       await this.updateSubtaskProgress(task.id);
     }
-    if (task.repeat) await this.spawnRepeat(task);
+    if (task.repeat && !data._skipRepeat) await this.spawnRepeat(task);
     return task;
   },
 
@@ -173,21 +173,32 @@ const tasks = {
 
   async importAll(userId, data) {
     if (!data || !Array.isArray(data.tasks)) throw new Error('无效备份文件');
+    const ownedTaskIds = new Set();
     for (const t of data.tasks) {
-      if (t.userId !== userId) continue;
+      if (!t.id || t.userId !== userId) continue;
+      ownedTaskIds.add(t.id);
+      t.userId = userId;
       await dbApi.put('tasks', t);
     }
     if (Array.isArray(data.progress)) {
-      for (const p of data.progress) await dbApi.put('progress', p);
+      for (const p of data.progress) {
+        if (p.taskId && ownedTaskIds.has(p.taskId)) await dbApi.put('progress', { ...p, id: p.id || utils.uuid() });
+      }
     }
     if (Array.isArray(data.attachments)) {
-      for (const a of data.attachments) await dbApi.put('attachments', a);
+      for (const a of data.attachments) {
+        if (a.taskId && ownedTaskIds.has(a.taskId) && (a.dataUrl || '').startsWith('data:')) await dbApi.put('attachments', { ...a, id: a.id || utils.uuid(), userId });
+      }
     }
     if (Array.isArray(data.subtasks)) {
-      for (const s of data.subtasks) await dbApi.put('subtasks', s);
+      for (const s of data.subtasks) {
+        if (s.taskId && ownedTaskIds.has(s.taskId)) await dbApi.put('subtasks', { ...s, id: s.id || utils.uuid() });
+      }
     }
     if (Array.isArray(data.templates)) {
-      for (const t of data.templates) await dbApi.put('templates', t);
+      for (const t of data.templates) {
+        if (t.userId === userId) await dbApi.put('templates', { ...t, id: t.id || utils.uuid(), userId });
+      }
     }
   },
 
@@ -244,7 +255,7 @@ const tasks = {
     const existing = await dbApi.queryByIndex('tasks', 'userId', task.userId);
     if (existing.some(t => t.title === task.title && t.dueDate === dueDate && t.repeat === task.repeat)) return;
     const { id, createdAt, updatedAt, status, progress, ...rest } = task;
-    await this.create({ ...rest, dueDate, status: 'pending', progress: 0 });
+    await this.create({ ...rest, dueDate, status: 'pending', progress: 0, _skipRepeat: true });
   },
 
   async saveTemplate(taskId, name) {
